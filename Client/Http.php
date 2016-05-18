@@ -14,7 +14,7 @@ class Http
         return $result;
     }
     //通过curl post数据
-    public static function curlPost($url,array $post_data = [],array $header = [])
+    public static function curlPost($url, array $post_data = [], array $header = [])
     {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_POST, true);
