@@ -1,0 +1,19 @@
+{
+    "name": "wcg/dingnotify",
+    "description": "旺财谷钉钉插件",
+    "type": "project",
+    "license": "proprietary",
+    "authors": [
+        {
+            "name": "shiyang",
+            "email": "shiyang@wangcaigu.com"
+        }
+    ],
+    "minimum-stability": "stable",
+    "autoload": {
+        "psr-4": { "Ding\\Client\\": "Client" }
+    },
+    "require": {
+        "php": ">=5.5.0"
+    }
+}

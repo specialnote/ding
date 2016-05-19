@@ -1,5 +1,7 @@
 <?php
 
+namespace Ding\Client;
+
 class Text
 {
     public $text;

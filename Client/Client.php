@@ -1,5 +1,9 @@
 <?php
 
+namespace Ding\Client;
+
+use Exception;
+
 class Client
 {
     private $corpid;//企业Id
@@ -15,25 +19,50 @@ class Client
     private $chat_create_url = 'https://oapi.dingtalk.com/chat/create';
     private $chat_send_url = 'https://oapi.dingtalk.com/chat/send';
 
-    public function __construct()
+    const GET_ACCESS_TOKEN = 'getAccessToken';
+    const GET_DEPARTMENT = 'getDepartment';
+    const GET_DEPARTMENT_USER = 'getDepartmentUser';
+    const COMPANY_MESSAGE_SEND = 'companyMessageSend';
+    const CHAT_CREATE = 'chatCreate';
+    const CHAT_SEND = 'chatSend';
+
+    public function __construct($config)
     {
-        $config = require_once __DIR__ . '/../Config/config.php';
         if (isset($config['corpid']) && isset($config['corpsecret']) && isset($config['agentid'])) {
             $this->corpid = $config['corpid'];
             $this->corpsecret = $config['corpsecret'];
             $this->agentid = $config['agentid'];
-            $time = time();
-            if (isset($_SESSION['access_token']) && isset($_SESSION['access_token_time']) && $time > $_SESSION['access_token_time']) {
-                $this->access_token = $_SESSION['access_token'];
-            } else {
-                $token = $this->getAccessToken();
-                $this->access_token = $token;
-                $_SESSION['access_token'] = $token;
-                $_SESSION['access_token_time'] = $time + 7200;//token有效时间
-            }
         } else {
-            throw new Exception('配置文件缺少必要参数');
+            throw new Exception('配置参数错误');
         }
+    }
+
+    /**
+     * 初始化，主要是初始化 access_token
+     * @return $this
+     * @throws Exception
+     */
+    public function initNew()
+    {
+        $json_file = __DIR__.'/../Config/temp.json';
+        $time = time();
+        if (file_exists($json_file)){
+            $content = file_get_contents($json_file);
+            $data = json_decode($content, true);
+            if (isset($data['access_token']) && isset($data['expire_time'])) {
+                $access_token = $data['access_token'];
+                $expire_time = $data['expire_time'];
+                if ($expire_time > $time) {
+                    $this->access_token = $access_token;
+                    return $this;
+                }
+            }
+        }
+        $access_token = $this->getAccessToken();
+        $expire_time = $time + 7200 - 60*10;
+        file_put_contents($access_token, json_encode(['access_token' => $access_token, 'expire_time' => $expire_time]));
+        $this->access_token = $access_token;
+        return $this;
     }
 
     /**
@@ -46,9 +75,43 @@ class Client
         require_once __DIR__ . '/Http.php';
         $url = $this->access_token_url . '?corpid=' . $this->corpid . '&corpsecret=' . $this->corpsecret;
         $result = Http::curlGet($url);
+        return $this->handleResult($result, Client::GET_ACCESS_TOKEN);
+    }
+
+    /**
+     * 处理钉钉请求处理结果
+     * @param string $result 请求钉钉得到的json串
+     * @param static $name 调用处理结果的函数名称
+     * @return mixed
+     * @throws Exception
+     */
+    private function handleResult($result, $name)
+    {
         $res = json_decode($result, true);
-        if (0 === $res["errcode"]) {
-            return $res['access_token'];
+        if (0 === $res['errcode']) {
+            switch ($name) {
+                case Client::GET_ACCESS_TOKEN :
+                    return $res['access_token'];
+                    break;
+                case Client::GET_DEPARTMENT :
+                    return $res['department'];
+                    break;
+                case Client::GET_DEPARTMENT_USER :
+                    return $res['userlist'];
+                    break;
+                case Client::COMPANY_MESSAGE_SEND :
+                    return true;
+                    break;
+                case Client::CHAT_CREATE :
+                    return $res['chatid'];
+                    break;
+                case Client::CHAT_SEND :
+                    return true;
+                    break;
+                default :
+                    return false;
+                    break;
+            }
         } else {
             throw new Exception($res["errmsg"]);
         }
@@ -63,12 +126,7 @@ class Client
     {
         $url = $this->department_url.'?access_token='.$this->access_token;
         $result = Http::curlGet($url);
-        $res = json_decode($result, true);
-        if (0 === $res['errcode']) {
-            return $res['department'];
-        } else {
-            throw new Exception($res['errmsg']);
-        }
+        return $this->handleResult($result, Client::GET_DEPARTMENT);
     }
 
     /**
@@ -81,12 +139,7 @@ class Client
     {
         $url = $this->department_user_url.'?access_token='.$this->access_token.'&department_id='.intval($department_id);
         $result = Http::curlGet($url);
-        $res = json_decode($result, true);
-        if (0 === $res['errcode']) {
-            return $res['userlist'];
-        } else {
-            throw new Exception($res['errmsg']);
-        }
+        return $this->handleResult($result, Client::GET_DEPARTMENT_USER);
     }
 
     /**
@@ -108,12 +161,7 @@ class Client
             'text' => $text->text,
         ];
         $result = Http::curlPost($url, $requestData, ['Content-Type:application/json']);
-        $res = json_decode($result, true);
-        if (0 === $res['errcode']) {
-            return true;
-        } else {
-            throw new Exception($res['errmsg']);
-        }
+        return $this->handleResult($result, Client::COMPANY_MESSAGE_SEND);
     }
 
     /**
@@ -133,12 +181,7 @@ class Client
             'useridlist' => $useridlist
         ];
         $result = Http::curlPost($url, $requestData, ['Content-Type:application/json']);
-        $res = json_decode($result, true);
-        if (0 === $res['errcode']) {
-            return $res['chatid'];
-        } else {
-            throw new Exception($res['errmsg']);
-        }
+        return $this->handleResult($result, Client::CHAT_CREATE);
     }
 
     /**
@@ -149,7 +192,7 @@ class Client
      * @return bool
      * @throws Exception
      */
-    public function chat_send($chatId, $sender, Text $text)
+    public function chatSend($chatId, $sender, Text $text)
     {
         $url = $this->chat_send_url.'?access_token='.$this->access_token;
         $requestData = [
@@ -159,11 +202,6 @@ class Client
             'text' => $text->text
         ];
         $result = Http::curlPost($url, $requestData, ['Content-Type:application/json']);
-        $res = json_decode($result, true);
-        if (0 === $res['errcode']) {
-            return true;
-        } else {
-            throw new Exception($res['errmsg']);
-        }
+        return $this->handleResult($result, Client::CHAT_SEND);
     }
 }
