@@ -1,5 +1,7 @@
 <?php
 
+namespace Ding\Client;
+
 class Http
 {
     //通过curl get数据

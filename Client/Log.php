@@ -5,7 +5,7 @@ namespace Ding\Client;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 
-class log implements LoggerInterface
+class Log implements LoggerInterface
 {
     public $log_path = __DIR__ . '/../Log/';
 
@@ -91,7 +91,7 @@ class log implements LoggerInterface
 
     public function log($level, $message, array $context = array())
     {
-        $message = 'log level : ' . $level . '; log message : ' . $this->interpolate($message, $context);
+        $message = 'log time : '.date('Y-m-d H:i:s').'; log level : ' . $level . '; log message : ' . $this->interpolate($message, $context);
         switch ($level) {
             case LogLevel::EMERGENCY :
                 $this->emergency($message);

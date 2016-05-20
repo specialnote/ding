@@ -3,6 +3,8 @@
 namespace Ding\Client;
 
 use Exception;
+use Ding\Client\Log;
+use Ding\Client\Http;
 
 class Client
 {
@@ -33,6 +35,7 @@ class Client
             $this->corpsecret = $config['corpsecret'];
             $this->agentid = $config['agentid'];
         } else {
+            (new Log())->error('配置参数错误');
             throw new Exception('配置参数错误');
         }
     }
@@ -44,9 +47,9 @@ class Client
      */
     public function initNew()
     {
-        $json_file = __DIR__.'/../Config/temp.json';
+        $json_file = __DIR__ . '/../Config/temp.json';
         $time = time();
-        if (file_exists($json_file)){
+        if (file_exists($json_file)) {
             $content = file_get_contents($json_file);
             $data = json_decode($content, true);
             if (isset($data['access_token']) && isset($data['expire_time'])) {
@@ -59,7 +62,7 @@ class Client
             }
         }
         $access_token = $this->getAccessToken();
-        $expire_time = $time + 7200 - 60*10;
+        $expire_time = $time + 7200 - 60 * 10;
         file_put_contents($access_token, json_encode(['access_token' => $access_token, 'expire_time' => $expire_time]));
         $this->access_token = $access_token;
         return $this;
@@ -81,13 +84,17 @@ class Client
     /**
      * 处理钉钉请求处理结果
      * @param string $result 请求钉钉得到的json串
-     * @param static $name 调用处理结果的函数名称
+     * @param string $name 调用处理结果的函数名称
      * @return mixed
      * @throws Exception
      */
     private function handleResult($result, $name)
     {
         $res = json_decode($result, true);
+        //没有获取到AccessToken
+        if (Client::GET_ACCESS_TOKEN === $name && 0 !== $res['errcode']) {
+            (new Log())->alert($res["errmsg"]);
+        }
         if (0 === $res['errcode']) {
             switch ($name) {
                 case Client::GET_ACCESS_TOKEN :
@@ -113,6 +120,7 @@ class Client
                     break;
             }
         } else {
+            (new Log())->error($res["errmsg"]);
             throw new Exception($res["errmsg"]);
         }
     }
@@ -124,7 +132,7 @@ class Client
      */
     public function getDepartment()
     {
-        $url = $this->department_url.'?access_token='.$this->access_token;
+        $url = $this->department_url . '?access_token=' . $this->access_token;
         $result = Http::curlGet($url);
         return $this->handleResult($result, Client::GET_DEPARTMENT);
     }
@@ -137,7 +145,7 @@ class Client
      */
     public function getDepartmentUser($department_id)
     {
-        $url = $this->department_user_url.'?access_token='.$this->access_token.'&department_id='.intval($department_id);
+        $url = $this->department_user_url . '?access_token=' . $this->access_token . '&department_id=' . intval($department_id);
         $result = Http::curlGet($url);
         return $this->handleResult($result, Client::GET_DEPARTMENT_USER);
     }
@@ -152,7 +160,7 @@ class Client
      */
     public function companyMessageSend(Text $text, $toUser, $toParty = '')
     {
-        $url = $this->company_message_send_url.'?access_token='.$this->access_token;
+        $url = $this->company_message_send_url . '?access_token=' . $this->access_token;
         $requestData = [
             'touser' => $toUser,
             'toparty' => $toParty,
@@ -174,7 +182,7 @@ class Client
      */
     public function chatCreate($name, $owner, array $useridlist)
     {
-        $url = $this->chat_create_url.'?access_token='.$this->access_token;
+        $url = $this->chat_create_url . '?access_token=' . $this->access_token;
         $requestData = [
             'name' => strval($name),
             'owner' => strval($owner),
@@ -194,7 +202,7 @@ class Client
      */
     public function chatSend($chatId, $sender, Text $text)
     {
-        $url = $this->chat_send_url.'?access_token='.$this->access_token;
+        $url = $this->chat_send_url . '?access_token=' . $this->access_token;
         $requestData = [
             'chatid' => strval($chatId),
             'sender' => strval($sender),
