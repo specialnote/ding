@@ -11,7 +11,10 @@
     ],
     "minimum-stability": "stable",
     "autoload": {
-        "psr-4": { "Ding\\Client\\": "Client" }
+        "psr-4": {
+            "Ding\\Client\\": "Client" ,
+            "Psr\\": "Psr"
+        }
     },
     "require": {
         "php": ">=5.5.0"

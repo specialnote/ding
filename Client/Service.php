@@ -17,7 +17,8 @@ class Service
         if (isset($config['corpid']) && isset($config['corpsecret']) && isset($config['agentid'])) {
             $client = new Client($config);
             $text = new Text($content);
-            $client->initNew()->chatSend(self::CHAT_DEFAULT, self::USER_DEFAULT, $text);
+            $client->initNew();
+            //$client->initNew()->chatSend(self::CHAT_DEFAULT, self::USER_DEFAULT, $text);
         } else {
             throw new \Exception('配置文件缺少必要参数');
         }
