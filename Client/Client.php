@@ -35,8 +35,8 @@ class Client
             $this->corpsecret = $config['corpsecret'];
             $this->agentid = $config['agentid'];
         } else {
-            (new Log())->error('配置参数错误');
-            throw new Exception('配置参数错误');
+            (new Log())->error('正在初始化客户端Client，配置参数错误');
+            throw new Exception('正在初始化客户端Client，配置参数错误');
         }
     }
 
@@ -47,7 +47,7 @@ class Client
      */
     public function initNew()
     {
-        $json_file = __DIR__ . '/../Config/temp.json';
+        $json_file = '/tmp/temp.json';
         $time = time();
         if (file_exists($json_file)) {
             $content = file_get_contents($json_file);
@@ -63,7 +63,7 @@ class Client
         }
         $access_token = $this->getAccessToken();
         $expire_time = $time + 7200 - 60 * 10;
-        file_put_contents($access_token, json_encode(['access_token' => $access_token, 'expire_time' => $expire_time]));
+        file_put_contents($json_file, json_encode(['access_token' => $access_token, 'expire_time' => $expire_time]));
         $this->access_token = $access_token;
         return $this;
     }
@@ -98,21 +98,27 @@ class Client
         if (0 === $res['errcode']) {
             switch ($name) {
                 case Client::GET_ACCESS_TOKEN :
+                    (new Log())->info('Client 客户端正在向钉钉获取 access_token , 操作成功');
                     return $res['access_token'];
                     break;
                 case Client::GET_DEPARTMENT :
+                    (new Log())->info('Client 客户端正在向钉钉获取部门信息 , 操作成功');
                     return $res['department'];
                     break;
                 case Client::GET_DEPARTMENT_USER :
+                    (new Log())->info('Client 客户端正在向钉钉获取用户信息 , 操作成功');
                     return $res['userlist'];
                     break;
                 case Client::COMPANY_MESSAGE_SEND :
+                    (new Log())->info('Client 客户端正在使用配置应用发送企业消息 , 操作成功');
                     return true;
                     break;
                 case Client::CHAT_CREATE :
+                    (new Log())->info('Client 客户端正在添加钉钉聊天群 , 操作成功');
                     return $res['chatid'];
                     break;
                 case Client::CHAT_SEND :
+                    (new Log())->info('Client 客户端正在向配置钉钉群中发送消息 , 操作成功');
                     return true;
                     break;
                 default :
@@ -120,7 +126,7 @@ class Client
                     break;
             }
         } else {
-            (new Log())->error($res["errmsg"]);
+            (new Log())->error('客户端正在向请求钉钉，操作失败，返回失败信息：' . $res["errmsg"]);
             throw new Exception($res["errmsg"]);
         }
     }
